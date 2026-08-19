@@ -119,6 +119,8 @@ RUN apt update && apt install software-properties-common -y \
     libjpeg-turbo8 patchelf \
     socat  curl\
     libsqlite3-dev \
+    catch2 \
+    gdb \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install conan==1.63.0 \
@@ -141,12 +143,15 @@ WORKDIR /asd
 COPY . /asd
 
 # Execute when project is ready
-RUN cd /asd && ls
-RUN mkdir -p /asd/build \
-    && cd /asd/build \
-    && cmake .. -G Ninja -DCMAKE_PREFIX_PATH="/usr/local/Qt/6.5.3/gcc_64/" \
-    && cmake --build . --target all \
-    && cmake --build . --target VendingMachine
+
+RUN mkdir -p /asd/build
+
+#RUN conan install /asd --build=missing
+
+#RUN  cd /asd/build \
+#    && cmake .. -G Ninja -DCMAKE_PREFIX_PATH="/usr/local/Qt/6.5.3/gcc_64/" \
+#    && cmake --build . --target all \
+#    && cmake --build . --target VendingMachine
 
 FROM ubuntu:22.04 as RunnableStage
 

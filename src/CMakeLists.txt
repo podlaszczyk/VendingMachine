@@ -1,3 +1,4 @@
+add_subdirectory(transaction)
 add_subdirectory(sqlite-library)
 
 find_package(Qt6 EXACT 6.5.3 COMPONENTS Core REQUIRED)

@@ -4,9 +4,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent)
-{
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent) {
     setWindowTitle("GUI Application");
 
     auto mainLayout = new QVBoxLayout;

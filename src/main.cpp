@@ -1,10 +1,12 @@
-#include <DummyLibrary.h>
+#include <TransactionRepository.h>
 
 #include "MainWindow.h"
 #include <QApplication>
 
 int main(int argc, char *argv[]) {
-    DummyLibrary library;
+    // DummyLibrary library;
+
+    TransactionRepository transactionRepository("path");
 
     QApplication app(argc, argv);
     MainWindow mainWindow;
