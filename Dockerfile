@@ -118,6 +118,7 @@ RUN apt update && apt install software-properties-common -y \
     libxkbcommon-x11-dev libxkbcommon0 \
     libjpeg-turbo8 patchelf \
     socat  curl\
+    libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install conan==1.63.0 \
