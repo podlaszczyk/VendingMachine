@@ -1,16 +1,22 @@
 #include <TransactionRepository.h>
 
-#include "MainWindow.h"
-#include <QApplication>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include "backend.h"
 
 int main(int argc, char *argv[]) {
-    // DummyLibrary library;
+    QGuiApplication app(argc, argv);
 
-    TransactionRepository transactionRepository("path");
+    QQmlApplicationEngine engine;
 
-    QApplication app(argc, argv);
-    MainWindow mainWindow;
-    mainWindow.show();
+    Backend backend;
+    engine.rootContext()->setContextProperty("backend", &backend);
+
+    engine.loadFromModule("MyQmlApp", "Main");
+
+    if (engine.rootObjects().isEmpty())
+        return -1;
 
     return app.exec();
 }

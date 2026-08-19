@@ -48,6 +48,9 @@ RUN apt update && apt install -y  \
     libgl1-mesa-dev \
     libatspi2.0-dev \
     libsqlite3-dev \
+    libgl-dev \
+    libegl1-mesa-dev \
+    libgles2-mesa-dev \
     sqlite3
 
 RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}.tar.gz && \
@@ -59,14 +62,40 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cm
     rm -rf cmake-${CMAKE_VERSION}.tar.gz cmake-${CMAKE_VERSION}
 
 RUN git clone --branch=v${QT_VERSION} git://code.qt.io/qt/qt5.git qt-sources
-RUN cd qt-sources && ./init-repository --module-subset=qtbase,qthttpserver,qtserialport,qtdeclarative
+RUN cd qt-sources \
+    && ./init-repository \
+    --module-subset=qtbase,qthttpserver,qtserialport,qtdeclarative,qtshadertools
+
 RUN mkdir -p qt-sources/build \
     && cd qt-sources/build \
-    && ../configure -opensource -confirm-license -widgets -submodules qthttpserver,qtserialport,qtdeclarative -gui --xcb -nomake examples -nomake tests -prefix /usr/local/Qt/${QT_VERSION}/gcc_64 \
-    && cmake --build . \
-    && cmake --install . \
-    && cd ../.. \
-    && rm -rf qt-sources
+    && ../configure \
+        -opensource \
+        -confirm-license \
+        -gui \
+        -xcb \
+        -opengl desktop \
+        -nomake examples \
+        -nomake tests \
+        -prefix /usr/local/Qt/${QT_VERSION}/gcc_64
+
+RUN find qt-sources/qtdeclarative/src/quick \
+    -maxdepth 1 \
+    -type f | head
+
+RUN cd qt-sources/build \
+    && cmake --build . --parallel
+
+RUN find qt-sources/build \
+    -iname '*Qt6Quick*' \
+    -o -iname 'libQt6Quick*'
+
+RUN cd qt-sources/build \
+    && cmake --install .
+
+RUN find /usr/local/Qt/${QT_VERSION}/gcc_64 \
+    -iname '*Qt6Quick*' \
+    -print
+
 
 RUN apt install -y libboost-filesystem-dev libboost-regex-dev cimg-dev patchelf nlohmann-json3-dev
 
@@ -143,19 +172,16 @@ WORKDIR /asd
 COPY . /asd
 
 # Execute when project is ready
+RUN mkdir -p /asd/build && cd build \
+    && cmake .. -G Ninja -DCMAKE_PREFIX_PATH="/usr/local/Qt/6.5.3/gcc_64/" \
+    && cmake --build . --target all \
+    && cmake --build . --target VendingMachine
 
-RUN mkdir -p /asd/build
-
-#RUN conan install /asd --build=missing
-
-#RUN  cd /asd/build \
-#    && cmake .. -G Ninja -DCMAKE_PREFIX_PATH="/usr/local/Qt/6.5.3/gcc_64/" \
-#    && cmake --build . --target all \
-#    && cmake --build . --target VendingMachine
+RUN cd /asd/build && cmake --build . --target package
 
 FROM ubuntu:22.04 as RunnableStage
 
-COPY --from=BuildServerCodeStage /asd/build/VendingMachine/ /asd/VendingMachine/
+COPY --from=BuildServerCodeStage /asd/build/AppDir/ /asd/AppDir/
 
 RUN apt update && apt upgrade -y
 RUN apt-get install -y socat libgl1 x11-apps libgl1-mesa-glx  libegl1-mesa libegl1 libopengl0
