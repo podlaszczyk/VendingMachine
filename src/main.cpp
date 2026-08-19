@@ -1,8 +1,14 @@
-
 #include <DummyLibrary.h>
 
-int main() {
+#include "MainWindow.h"
+#include <QApplication>
 
+int main(int argc, char *argv[]) {
     DummyLibrary library;
-    return 0;
+
+    QApplication app(argc, argv);
+    MainWindow mainWindow;
+    mainWindow.show();
+
+    return app.exec();
 }
