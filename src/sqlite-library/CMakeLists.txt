@@ -10,6 +10,8 @@ add_library(Device::${LIB_NAME} ALIAS ${LIB_NAME})
 target_link_libraries(${LIB_NAME} PUBLIC
         SQLite::SQLite3
         Model::Transaction
+        PRIVATE
+        Project::Coverage
 )
 
 target_include_directories(${LIB_NAME} INTERFACE .)

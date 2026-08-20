@@ -1,6 +1,7 @@
 add_subdirectory(transaction)
 add_subdirectory(sqlite-library)
 add_subdirectory(vending-machine)
+add_subdirectory(tests)
 
 find_package(Qt6 REQUIRED COMPONENTS
         Quick

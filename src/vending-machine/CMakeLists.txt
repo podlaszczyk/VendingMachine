@@ -18,6 +18,8 @@ target_link_libraries(${LIB_NAME} PUBLIC
         Hardware::CardReader
         Hardware::Dispenser
         VendingMachine::Types
+        PRIVATE
+        Project::Coverage
 )
 
 add_subdirectory(tests)
