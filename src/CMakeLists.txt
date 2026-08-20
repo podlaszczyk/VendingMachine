@@ -1,5 +1,6 @@
 add_subdirectory(transaction)
 add_subdirectory(sqlite-library)
+add_subdirectory(vending-machine)
 
 find_package(Qt6 REQUIRED COMPONENTS
         Quick
@@ -25,13 +26,13 @@ qt_add_qml_module(${APPLICATION}
 
 target_link_libraries(${APPLICATION}
         PRIVATE
-            Qt6::Quick
-            Qt6::Qml
+        Qt6::Quick
+        Qt6::Qml
         PUBLIC
-            sqlite-library
+        sqlite-library
 )
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_custom_target(package
             COMMAND ${CMAKE_COMMAND} -E rm -rf
             "${CMAKE_BINARY_DIR}/AppDir"
@@ -50,4 +51,4 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
             COMMENT "Packaging ${APPLICATION} with linuxdeploy"
     )
-endif()
+endif ()
