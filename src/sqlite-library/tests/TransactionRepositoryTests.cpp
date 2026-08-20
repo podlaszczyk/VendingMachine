@@ -4,20 +4,20 @@
 
 #include <filesystem>
 
-namespace {
-    Transaction createTransaction() {
-        return Transaction{
-            1111111, "random-id", Status::Dispensing
-        };
-    }
-}
-
-TEST_CASE ("Datebase does not throw when created")
+namespace
 {
-    REQUIRE_NOTHROW( TransactionRepository());
+Transaction createTransaction()
+{
+    return Transaction{111'1111, "random-id", Status::Dispensing};
+}
+} // namespace
+
+TEST_CASE("Datebase does not throw when created")
+{
+    REQUIRE_NOTHROW(TransactionRepository());
 }
 
-TEST_CASE ("Empty Datebase does not have any records")
+TEST_CASE("Empty Datebase does not have any records")
 {
     TransactionRepository repository;
 
@@ -30,10 +30,10 @@ TEST_CASE ("Empty Datebase does not have any records")
     REQUIRE(rowsDispensing.size() == 0);
     REQUIRE(rowsCompleted.size() == 0);
     REQUIRE(rowsFailed.size() == 0);
-
 }
 
-TEST_CASE ("TransactionRepository opens database inserts one dummy row and selects it"){
+TEST_CASE("TransactionRepository opens database inserts one dummy row and selects it")
+{
     // GIVEN
     TransactionRepository repository;
 
@@ -50,7 +50,8 @@ TEST_CASE ("TransactionRepository opens database inserts one dummy row and selec
     REQUIRE(rows[0].status == transaction.status);
 }
 
-TEST_CASE("Updates status of transaction") {
+TEST_CASE("Updates status of transaction")
+{
     // GIVEN
     TransactionRepository repository;
 
@@ -71,6 +72,4 @@ TEST_CASE("Updates status of transaction") {
     REQUIRE(rowsCompleted.size() == 1);
     REQUIRE(rowsCompleted[0].id == transaction.id);
     REQUIRE(rowsCompleted[0].status == Status::Completed);
-
-
 }

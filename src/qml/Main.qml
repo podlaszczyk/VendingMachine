@@ -67,8 +67,8 @@ ApplicationWindow {
 
         Label {
             text: cardPresent
-                  ? qsTr("Wybierz produkt")
-                  : qsTr("Najpierw przyłóż kartę")
+                ? qsTr("Wybierz produkt")
+                : qsTr("Najpierw przyłóż kartę")
             font.pixelSize: 22
             Layout.alignment: Qt.AlignHCenter
         }
@@ -82,10 +82,10 @@ ApplicationWindow {
 
             Repeater {
                 model: [
-                    { name: qsTr("Kask ochronny"), price: "35,00 zł" },
-                    { name: qsTr("Okulary ochronne"), price: "18,00 zł" },
-                    { name: qsTr("Rękawice robocze"), price: "12,00 zł" },
-                    { name: qsTr("Ochronniki słuchu"), price: "28,00 zł" }
+                    {name: qsTr("Kask ochronny"), price: "35,00 zł"},
+                    {name: qsTr("Okulary ochronne"), price: "18,00 zł"},
+                    {name: qsTr("Rękawice robocze"), price: "12,00 zł"},
+                    {name: qsTr("Ochronniki słuchu"), price: "28,00 zł"}
                 ]
 
                 delegate: Button {
@@ -107,8 +107,8 @@ ApplicationWindow {
 
         Label {
             text: dispensingTimer.running
-                  ? qsTr("Wydawanie: %1").arg(selectedProduct)
-                  : qsTr("Gotowy")
+                ? qsTr("Wydawanie: %1").arg(selectedProduct)
+                : qsTr("Gotowy")
             Layout.alignment: Qt.AlignHCenter
         }
 

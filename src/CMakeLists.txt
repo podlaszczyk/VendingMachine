@@ -14,7 +14,6 @@ set(CMAKE_AUTORCC ON)
 
 qt_add_executable(${APPLICATION}
         main.cpp
-        backend.cpp
 )
 
 qt_add_qml_module(${APPLICATION}

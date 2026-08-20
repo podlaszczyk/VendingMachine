@@ -2,14 +2,15 @@
 
 #include <string>
 
-
-enum class Status {
+enum class Status
+{
     Dispensing,
     Completed,
     Failed,
 };
 
-struct Transaction {
+struct Transaction
+{
     std::int64_t timestamp;
     std::string id;
     Status status;
