@@ -7,5 +7,6 @@ add_executable(${TEST_NAME})
 target_link_libraries(${TEST_NAME} PRIVATE
         Tests::TransactionCases
         Tests::VendingMachineCases
+        Tests::SynchronizationCases
         Catch2::Catch2WithMain
 )

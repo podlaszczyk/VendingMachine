@@ -73,3 +73,20 @@ TEST_CASE("Updates status of transaction")
     REQUIRE(rowsCompleted[0].id == transaction.id);
     REQUIRE(rowsCompleted[0].status == Status::Completed);
 }
+
+TEST_CASE("Status update makes a synchronized transaction pending again")
+{
+    TransactionRepository repository;
+    repository.initialize();
+    const auto transaction = createTransaction();
+    repository.insert(transaction);
+    repository.markSynchronized(transaction.id);
+    REQUIRE(repository.findUnsynchronized().empty());
+
+    repository.updateStatus(transaction.id, Status::Completed);
+
+    const auto pending = repository.findUnsynchronized();
+    REQUIRE(pending.size() == 1);
+    REQUIRE(pending.front().id == transaction.id);
+    REQUIRE(pending.front().status == Status::Completed);
+}

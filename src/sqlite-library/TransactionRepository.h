@@ -18,6 +18,8 @@ public:
     void insert(const Transaction& transaction);
     void updateStatus(const std::string& transactionId, Status status);
     std::vector<Transaction> findByStatus(Status status) const;
+    [[nodiscard]] std::vector<Transaction> findUnsynchronized() const;
+    void markSynchronized(const std::string& transactionId);
 
 private:
     sqlite3* database_{nullptr};
