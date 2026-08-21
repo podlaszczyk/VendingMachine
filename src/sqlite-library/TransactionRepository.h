@@ -3,12 +3,13 @@
 #include <sqlite3.h>
 #include <Transaction.h>
 
+#include <string>
 #include <vector>
 
 class TransactionRepository
 {
 public:
-    TransactionRepository();
+    explicit TransactionRepository(const std::string& databasePath = ":memory:");
     ~TransactionRepository();
 
     TransactionRepository(const TransactionRepository&) = delete;
@@ -22,7 +23,7 @@ public:
     void markSynchronized(const std::string& transactionId);
 
 private:
-    sqlite3* database_{nullptr};
+    sqlite3* database{nullptr};
     const static char* statusToString(Status status);
     static Status statusFromString(const char* status);
 };

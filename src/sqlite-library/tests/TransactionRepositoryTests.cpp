@@ -2,6 +2,7 @@
 
 #include <catch2/catch.hpp>
 
+#include <chrono>
 #include <filesystem>
 
 namespace
@@ -9,6 +10,16 @@ namespace
 Transaction createTransaction()
 {
     return Transaction{111'1111, "random-id", Status::Dispensing};
+}
+} // namespace
+
+namespace
+{
+std::filesystem::path temporaryDatabasePath()
+{
+    return std::filesystem::temp_directory_path()
+         / ("vending-machine-transactions-"
+            + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".sqlite");
 }
 } // namespace
 
@@ -89,4 +100,87 @@ TEST_CASE("Status update makes a synchronized transaction pending again")
     REQUIRE(pending.size() == 1);
     REQUIRE(pending.front().id == transaction.id);
     REQUIRE(pending.front().status == Status::Completed);
+}
+
+TEST_CASE("Inserted transactions start unsynchronized")
+{
+    TransactionRepository repository;
+    repository.initialize();
+    repository.insert(createTransaction());
+
+    const auto pending = repository.findUnsynchronized();
+
+    REQUIRE(pending.size() == 1);
+    REQUIRE(pending.front().id == "random-id");
+}
+
+TEST_CASE("Transactions can be marked synchronized independently")
+{
+    TransactionRepository repository;
+    repository.initialize();
+    repository.insert(Transaction{2, "second", Status::Completed});
+    repository.insert(Transaction{1, "first", Status::Failed});
+
+    repository.markSynchronized("first");
+
+    const auto pending = repository.findUnsynchronized();
+    REQUIRE(pending.size() == 1);
+    REQUIRE(pending.front().id == "second");
+    REQUIRE(pending.front().status == Status::Completed);
+}
+
+TEST_CASE("Unsynchronized transactions are returned in timestamp order")
+{
+    TransactionRepository repository;
+    repository.initialize();
+    repository.insert(Transaction{30, "third", Status::Failed});
+    repository.insert(Transaction{10, "second", Status::Dispensing});
+    repository.insert(Transaction{20, "first", Status::Completed});
+
+    const auto pending = repository.findUnsynchronized();
+
+    REQUIRE(pending.size() == 3);
+    REQUIRE(pending[0].id == "second");
+    REQUIRE(pending[1].id == "first");
+    REQUIRE(pending[2].id == "third");
+}
+
+TEST_CASE("Database can be reopened without losing transactions")
+{
+    const auto path = temporaryDatabasePath();
+    const auto transaction = createTransaction();
+
+    {
+        TransactionRepository repository(path.string());
+        repository.initialize();
+        repository.insert(transaction);
+    }
+
+    {
+        TransactionRepository repository(path.string());
+        repository.initialize();
+        const auto rows = repository.findByStatus(Status::Dispensing);
+        REQUIRE(rows.size() == 1);
+        REQUIRE(rows.front().id == transaction.id);
+        REQUIRE(rows.front().timestamp == transaction.timestamp);
+    }
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("Initializing an already initialized database is harmless")
+{
+    TransactionRepository repository;
+
+    REQUIRE_NOTHROW(repository.initialize());
+    REQUIRE_NOTHROW(repository.initialize());
+}
+
+TEST_CASE("Duplicate transaction IDs are rejected")
+{
+    TransactionRepository repository;
+    repository.initialize();
+    repository.insert(createTransaction());
+
+    REQUIRE_THROWS(repository.insert(Transaction{222, "random-id", Status::Completed}));
 }

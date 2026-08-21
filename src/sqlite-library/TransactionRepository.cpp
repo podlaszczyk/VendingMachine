@@ -1,28 +1,26 @@
 #include "TransactionRepository.h"
 
-#include <filesystem>
-#include <iostream>
 #include <stdexcept>
 
 TransactionRepository::~TransactionRepository()
 {
-    if (database_) {
-        sqlite3_close(database_);
+    if (database) {
+        sqlite3_close(database);
     }
 }
 
-TransactionRepository::TransactionRepository()
+TransactionRepository::TransactionRepository(const std::string& databasePath)
 {
-    const int result = sqlite3_open(":memory:", &database_);
+    const int result = sqlite3_open(databasePath.c_str(), &database);
 
     if (result != SQLITE_OK) {
-        std::cerr << "Cannot open database: " << sqlite3_errmsg(database_) << '\n';
+        const std::string error = database ? sqlite3_errmsg(database) : "Unknown SQLite error";
 
-        if (database_) {
-            sqlite3_close(database_);
-            database_ = nullptr;
+        if (database) {
+            sqlite3_close(database);
+            database = nullptr;
         }
-        throw std::runtime_error("Failed to open database: ");
+        throw std::runtime_error("Failed to open database: " + error);
     }
 }
 
@@ -45,14 +43,13 @@ void TransactionRepository::initialize()
 
     char* errorMessage = nullptr;
 
-    const int result = sqlite3_exec(database_, sql, nullptr, nullptr, &errorMessage);
+    const int result = sqlite3_exec(database, sql, nullptr, nullptr, &errorMessage);
 
     if (result != SQLITE_OK) {
         const std::string error = errorMessage ? errorMessage : "Unknown SQLite error";
         sqlite3_free(errorMessage);
         throw std::runtime_error("Failed to initialize database: " + error);
     }
-    std::cout << "Table created\n";
 }
 
 const char* TransactionRepository::statusToString(Status status)
@@ -96,10 +93,10 @@ void TransactionRepository::insert(const Transaction& transaction)
 
     sqlite3_stmt* statement = nullptr;
 
-    int result = sqlite3_prepare_v2(database_, sql, -1, &statement, nullptr);
+    int result = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
 
     if (result != SQLITE_OK) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     sqlite3_bind_text(statement, 1, transaction.id.c_str(), -1, SQLITE_TRANSIENT);
@@ -111,7 +108,7 @@ void TransactionRepository::insert(const Transaction& transaction)
     sqlite3_finalize(statement);
 
     if (result != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 }
 
@@ -125,10 +122,10 @@ void TransactionRepository::updateStatus(const std::string& transactionId, Statu
 
     sqlite3_stmt* statement = nullptr;
 
-    int result = sqlite3_prepare_v2(database_, sql, -1, &statement, nullptr);
+    int result = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
 
     if (result != SQLITE_OK) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     sqlite3_bind_text(statement, 1, statusToString(status), -1, SQLITE_TRANSIENT);
@@ -138,7 +135,7 @@ void TransactionRepository::updateStatus(const std::string& transactionId, Statu
     sqlite3_finalize(statement);
 
     if (result != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 }
 
@@ -150,15 +147,16 @@ std::vector<Transaction> TransactionRepository::findByStatus(Status status) cons
             timestamp,
             status
         FROM transactions
-        WHERE status = ?;
+        WHERE status = ?
+        ORDER BY timestamp, id;
     )";
 
     sqlite3_stmt* statement = nullptr;
 
-    int result = sqlite3_prepare_v2(database_, sql, -1, &statement, nullptr);
+    int result = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
 
     if (result != SQLITE_OK) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     sqlite3_bind_text(statement, 1, statusToString(status), -1, SQLITE_TRANSIENT);
@@ -177,7 +175,7 @@ std::vector<Transaction> TransactionRepository::findByStatus(Status status) cons
     sqlite3_finalize(statement);
 
     if (result != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     return transactions;
@@ -193,9 +191,9 @@ std::vector<Transaction> TransactionRepository::findUnsynchronized() const
     )";
 
     sqlite3_stmt* statement = nullptr;
-    int result = sqlite3_prepare_v2(database_, sql, -1, &statement, nullptr);
+    int result = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
     if (result != SQLITE_OK) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     std::vector<Transaction> transactions;
@@ -209,7 +207,7 @@ std::vector<Transaction> TransactionRepository::findUnsynchronized() const
 
     sqlite3_finalize(statement);
     if (result != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     return transactions;
@@ -224,9 +222,9 @@ void TransactionRepository::markSynchronized(const std::string& transactionId)
     )";
 
     sqlite3_stmt* statement = nullptr;
-    int result = sqlite3_prepare_v2(database_, sql, -1, &statement, nullptr);
+    int result = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
     if (result != SQLITE_OK) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 
     sqlite3_bind_text(statement, 1, transactionId.c_str(), -1, SQLITE_TRANSIENT);
@@ -234,6 +232,6 @@ void TransactionRepository::markSynchronized(const std::string& transactionId)
     sqlite3_finalize(statement);
 
     if (result != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(database_));
+        throw std::runtime_error(sqlite3_errmsg(database));
     }
 }
