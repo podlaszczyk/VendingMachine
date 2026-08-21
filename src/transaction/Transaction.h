@@ -12,6 +12,11 @@ enum class Status
 
 struct Transaction
 {
+    static Transaction create(std::int64_t timestamp,
+                              std::string productId,
+                              std::string cardId,
+                              Status status);
+
     std::int64_t timestamp;
     std::string id;
     std::string productId;
