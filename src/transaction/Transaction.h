@@ -14,5 +14,7 @@ struct Transaction
 {
     std::int64_t timestamp;
     std::string id;
+    std::string productId;
+    std::string cardId;
     Status status;
 };

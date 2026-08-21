@@ -30,6 +30,8 @@ void TransactionRepository::initialize()
         CREATE TABLE IF NOT EXISTS transactions (
             id TEXT PRIMARY KEY NOT NULL,
             timestamp INTEGER NOT NULL,
+            product_id TEXT NOT NULL,
+            card_id TEXT NOT NULL,
             status TEXT NOT NULL
                 CHECK(status IN (
                     'Dispensing',
@@ -88,7 +90,7 @@ Status TransactionRepository::statusFromString(const char* status)
 void TransactionRepository::insert(const Transaction& transaction)
 {
     const constexpr char* sql = R"(
-        INSERT INTO transactions(id, timestamp, status) VALUES (?, ?, ?);
+        INSERT INTO transactions(id, timestamp, product_id, card_id, status) VALUES (?, ?, ?, ?, ?);
     )";
 
     sqlite3_stmt* statement = nullptr;
@@ -101,7 +103,9 @@ void TransactionRepository::insert(const Transaction& transaction)
 
     sqlite3_bind_text(statement, 1, transaction.id.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(statement, 2, transaction.timestamp);
-    sqlite3_bind_text(statement, 3, statusToString(transaction.status), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 3, transaction.productId.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 4, transaction.cardId.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 5, statusToString(transaction.status), -1, SQLITE_TRANSIENT);
 
     result = sqlite3_step(statement);
 
@@ -145,6 +149,8 @@ std::vector<Transaction> TransactionRepository::findByStatus(Status status) cons
         SELECT
             id,
             timestamp,
+            product_id,
+            card_id,
             status
         FROM transactions
         WHERE status = ?
@@ -168,7 +174,9 @@ std::vector<Transaction> TransactionRepository::findByStatus(Status status) cons
 
         transaction.id = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
         transaction.timestamp = sqlite3_column_int64(statement, 1);
-        transaction.status = statusFromString(reinterpret_cast<const char*>(sqlite3_column_text(statement, 2)));
+        transaction.productId = reinterpret_cast<const char*>(sqlite3_column_text(statement, 2));
+        transaction.cardId = reinterpret_cast<const char*>(sqlite3_column_text(statement, 3));
+        transaction.status = statusFromString(reinterpret_cast<const char*>(sqlite3_column_text(statement, 4)));
         transactions.push_back(std::move(transaction));
     }
 
@@ -184,7 +192,7 @@ std::vector<Transaction> TransactionRepository::findByStatus(Status status) cons
 std::vector<Transaction> TransactionRepository::findUnsynchronized() const
 {
     const constexpr char* sql = R"(
-        SELECT id, timestamp, status
+        SELECT id, timestamp, product_id, card_id, status
         FROM transactions
         WHERE synchronized = 0
         ORDER BY timestamp, id;
@@ -201,7 +209,9 @@ std::vector<Transaction> TransactionRepository::findUnsynchronized() const
         transactions.push_back(Transaction{
             sqlite3_column_int64(statement, 1),
             reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)),
-            statusFromString(reinterpret_cast<const char*>(sqlite3_column_text(statement, 2))),
+            reinterpret_cast<const char*>(sqlite3_column_text(statement, 2)),
+            reinterpret_cast<const char*>(sqlite3_column_text(statement, 3)),
+            statusFromString(reinterpret_cast<const char*>(sqlite3_column_text(statement, 4))),
         });
     }
 

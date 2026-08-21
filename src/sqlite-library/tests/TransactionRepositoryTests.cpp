@@ -9,7 +9,7 @@ namespace
 {
 Transaction createTransaction()
 {
-    return Transaction{111'1111, "random-id", Status::Dispensing};
+    return Transaction{111'1111, "random-id", "product-1", "card-1", Status::Dispensing};
 }
 } // namespace
 
@@ -58,6 +58,8 @@ TEST_CASE("TransactionRepository opens database inserts one dummy row and select
     REQUIRE(rows.size() == 1);
     REQUIRE(rows[0].timestamp == transaction.timestamp);
     REQUIRE(rows[0].id == transaction.id);
+    REQUIRE(rows[0].productId == transaction.productId);
+    REQUIRE(rows[0].cardId == transaction.cardId);
     REQUIRE(rows[0].status == transaction.status);
 }
 
@@ -118,8 +120,8 @@ TEST_CASE("Transactions can be marked synchronized independently")
 {
     TransactionRepository repository;
     repository.initialize();
-    repository.insert(Transaction{2, "second", Status::Completed});
-    repository.insert(Transaction{1, "first", Status::Failed});
+    repository.insert(Transaction{2, "second", "product-2", "card-2", Status::Completed});
+    repository.insert(Transaction{1, "first", "product-1", "card-1", Status::Failed});
 
     repository.markSynchronized("first");
 
@@ -133,9 +135,9 @@ TEST_CASE("Unsynchronized transactions are returned in timestamp order")
 {
     TransactionRepository repository;
     repository.initialize();
-    repository.insert(Transaction{30, "third", Status::Failed});
-    repository.insert(Transaction{10, "second", Status::Dispensing});
-    repository.insert(Transaction{20, "first", Status::Completed});
+    repository.insert(Transaction{30, "third", "product-3", "card-3", Status::Failed});
+    repository.insert(Transaction{10, "second", "product-2", "card-2", Status::Dispensing});
+    repository.insert(Transaction{20, "first", "product-1", "card-1", Status::Completed});
 
     const auto pending = repository.findUnsynchronized();
 
@@ -163,6 +165,8 @@ TEST_CASE("Database can be reopened without losing transactions")
         REQUIRE(rows.size() == 1);
         REQUIRE(rows.front().id == transaction.id);
         REQUIRE(rows.front().timestamp == transaction.timestamp);
+        REQUIRE(rows.front().productId == transaction.productId);
+        REQUIRE(rows.front().cardId == transaction.cardId);
     }
 
     std::filesystem::remove(path);
@@ -182,5 +186,5 @@ TEST_CASE("Duplicate transaction IDs are rejected")
     repository.initialize();
     repository.insert(createTransaction());
 
-    REQUIRE_THROWS(repository.insert(Transaction{222, "random-id", Status::Completed}));
+    REQUIRE_THROWS(repository.insert(Transaction{222, "random-id", "product-2", "card-2", Status::Completed}));
 }

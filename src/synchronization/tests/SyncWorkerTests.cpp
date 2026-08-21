@@ -11,7 +11,7 @@ namespace
 {
 Transaction transaction()
 {
-    return Transaction{20'0000'0000, "transaction-uuid", Status::Completed};
+    return Transaction{20'0000'0000, "transaction-uuid", "product-1", "card-1", Status::Completed};
 }
 } // namespace
 
@@ -33,7 +33,7 @@ TEST_CASE("Unsynchronized transaction is posted and marked as synchronized")
     REQUIRE(transport.requests().front().endpoint == "/transactions");
     REQUIRE(transport.requests().front().idempotencyKey == "transaction-uuid");
     REQUIRE(transport.requests().front().jsonBody
-            == R"({"id":"transaction-uuid","timestamp":2000000000,"status":"Completed"})");
+            == R"({"id":"transaction-uuid","timestamp":2000000000,"productId":"product-1","cardId":"card-1","status":"Completed"})");
 
     const auto nextRun = worker.runOnce(SyncWorker::Clock::time_point{} + std::chrono::seconds{1});
     REQUIRE(nextRun.attempted == 0);

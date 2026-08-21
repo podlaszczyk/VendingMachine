@@ -53,5 +53,7 @@ const char* statusToString(Status status)
 std::string transactionToJson(const Transaction& transaction)
 {
     return "{\"id\":\"" + escapeJson(transaction.id) + "\",\"timestamp\":" + std::to_string(transaction.timestamp)
-         + ",\"status\":\"" + statusToString(transaction.status) + "\"}";
+         + ",\"productId\":\"" + escapeJson(transaction.productId)
+         + "\",\"cardId\":\"" + escapeJson(transaction.cardId)
+         + "\",\"status\":\"" + statusToString(transaction.status) + "\"}";
 }
