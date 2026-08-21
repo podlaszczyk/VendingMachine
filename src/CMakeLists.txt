@@ -1,13 +1,16 @@
+find_package(Qt6 REQUIRED COMPONENTS
+        Core
+        Quick
+        Qml
+)
+
 add_subdirectory(transaction)
 add_subdirectory(sqlite-library)
 add_subdirectory(vending-machine)
 add_subdirectory(synchronization)
+add_subdirectory(app-controller)
 add_subdirectory(tests)
 
-find_package(Qt6 REQUIRED COMPONENTS
-        Quick
-        Qml
-)
 qt_policy(SET QTP0001 NEW)
 set(APPLICATION VendingMachine)
 
@@ -30,7 +33,9 @@ target_link_libraries(${APPLICATION}
         Qt6::Quick
         Qt6::Qml
         PUBLIC
-        sqlite-library
+        Device::sqlite-library
+        Model::Transaction
+        App::Controller
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")

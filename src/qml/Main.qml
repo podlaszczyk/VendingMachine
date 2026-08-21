@@ -3,37 +3,12 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 ApplicationWindow {
-    id: window
-
     visible: true
     width: 700
     height: 500
     minimumWidth: 560
     minimumHeight: 420
     title: qsTr("Vending Machine")
-
-    property bool cardPresent: false
-    property bool online: false
-    property int pendingTransactions: 2
-    property string selectedProduct: ""
-
-    Timer {
-        id: dispensingTimer
-
-        interval: 100
-        repeat: true
-
-        onTriggered: {
-            dispensingProgress.value += 2
-
-            if (dispensingProgress.value >= 100) {
-                stop()
-                pendingTransactions += 1
-                cardPresent = false
-                selectedProduct = ""
-            }
-        }
-    }
 
     header: ToolBar {
         RowLayout {
@@ -49,13 +24,7 @@ ApplicationWindow {
             }
 
             Label {
-                text: online ? qsTr("Online") : qsTr("Offline")
-                color: online ? "green" : "crimson"
-                font.bold: true
-            }
-
-            Label {
-                text: qsTr("Oczekujące: %1").arg(pendingTransactions)
+                text: qsTr("Pending: %1").arg(vendingController.pendingTransactions)
             }
         }
     }
@@ -66,9 +35,11 @@ ApplicationWindow {
         spacing: 20
 
         Label {
-            text: cardPresent
-                ? qsTr("Wybierz produkt")
-                : qsTr("Najpierw przyłóż kartę")
+            text: vendingController.state === "Idle"
+                  ? qsTr("Touch a card")
+                  : vendingController.state === "CardRead"
+                    ? qsTr("Select a product")
+                    : qsTr("Status: %1").arg(vendingController.state)
             font.pixelSize: 22
             Layout.alignment: Qt.AlignHCenter
         }
@@ -82,51 +53,58 @@ ApplicationWindow {
 
             Repeater {
                 model: [
-                    {name: qsTr("Kask ochronny"), price: "35,00 zł"},
-                    {name: qsTr("Okulary ochronne"), price: "18,00 zł"},
-                    {name: qsTr("Rękawice robocze"), price: "12,00 zł"},
-                    {name: qsTr("Ochronniki słuchu"), price: "28,00 zł"}
+                    {id: "helmet", name: qsTr("Helmet"), price: "35,00 zł"},
+                    {id: "glasses", name: qsTr("Safety glasses"), price: "18,00 zł"},
+                    {id: "gloves", name: qsTr("Safety gloves"), price: "12,00 zł"},
+                    {id: "ear-protection", name: qsTr("Safety Headphones"), price: "28,00 zł"}
                 ]
 
                 delegate: Button {
                     required property var modelData
 
                     text: "%1\n%2".arg(modelData.name).arg(modelData.price)
-                    enabled: cardPresent && !dispensingTimer.running
+                    enabled: vendingController.state === "CardRead"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    onClicked: {
-                        selectedProduct = modelData.name
-                        dispensingProgress.value = 0
-                        dispensingTimer.start()
-                    }
+                    onClicked: vendingController.selectProduct(modelData.id)
                 }
             }
         }
 
         Label {
-            text: dispensingTimer.running
-                ? qsTr("Wydawanie: %1").arg(selectedProduct)
-                : qsTr("Gotowy")
+            text: qsTr("StateMachine: %1").arg(vendingController.state)
             Layout.alignment: Qt.AlignHCenter
         }
 
         ProgressBar {
-            id: dispensingProgress
-
             from: 0
-            to: 100
-            value: 0
+            to: 1
+            value: vendingController.state === "Dispensing" ? 0.5 : 0
+            indeterminate: vendingController.state === "Dispensing"
             Layout.fillWidth: true
         }
 
-        Button {
-            text: qsTr("Symuluj przyłożenie karty")
-            enabled: !cardPresent && !dispensingTimer.running
+        RowLayout {
             Layout.alignment: Qt.AlignHCenter
 
-            onClicked: cardPresent = true
+            Button {
+                text: qsTr("Simulate Card Touching")
+                enabled: vendingController.state === "Idle"
+                onClicked: vendingController.simulateCardTap()
+            }
+
+            Button {
+                text: qsTr("New Transaction")
+                enabled: vendingController.state === "Completed" || vendingController.state === "Failed"
+                onClicked: vendingController.reset()
+            }
+
+            Button {
+                text: qsTr("Simulate Error")
+                enabled: vendingController.state === "Dispensing"
+                onClicked: vendingController.simulateDispenseFailure()
+            }
         }
     }
 }
