@@ -1,1 +1,0 @@
-1. Prepare isolated environment for QT
