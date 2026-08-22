@@ -50,6 +50,7 @@ VendingApplicationController::VendingApplicationController(QObject* parent)
     , ownedMachine(std::make_unique<VendingMachine>(*dispenser))
     , machine(ownedMachine.get())
 {
+    setupSelectionTimeout();
     repository->initialize();
     refreshState();
     refreshPendingTransactions();
@@ -63,6 +64,7 @@ VendingApplicationController::VendingApplicationController(ICardReader& cardRead
     , repository(std::make_unique<TransactionRepository>())
     , machine(&machine)
 {
+    setupSelectionTimeout();
     repository->initialize();
     connectCardReader(cardReader);
     refreshState();
@@ -88,7 +90,9 @@ int VendingApplicationController::pendingTransactions() const
 
 void VendingApplicationController::simulateCardTap()
 {
-    machine->onCardTapped(CardId{"demo-card"});
+    if (machine->onCardTapped(CardId{"demo-card"}) == EventResult::Accepted) {
+        startSelectionTimeout();
+    }
     refreshState();
 }
 
@@ -111,6 +115,7 @@ void VendingApplicationController::selectProduct(const QString& productId)
         refreshPendingTransactions();
 
         if (machine->onProductSelected(ProductId{product}) == EventResult::Accepted) {
+            stopSelectionTimeout();
             refreshState();
             QTimer::singleShot(1500, this, [this] {
                 finishDispensing(true);
@@ -124,6 +129,7 @@ void VendingApplicationController::selectProduct(const QString& productId)
 
 void VendingApplicationController::reset()
 {
+    stopSelectionTimeout();
     machine->reset();
     refreshState();
 }
@@ -176,7 +182,30 @@ void VendingApplicationController::connectCardReader(ICardReader& reader)
 {
     cardReader = &reader;
     cardReader->setCardTappedHandler([this](CardId cardId) {
-        machine->onCardTapped(std::move(cardId));
+        if (machine->onCardTapped(std::move(cardId)) == EventResult::Accepted) {
+            startSelectionTimeout();
+        }
         refreshState();
+    });
+}
+
+void VendingApplicationController::startSelectionTimeout()
+{
+    selectionTimeoutTimer.start(15'000);
+}
+
+void VendingApplicationController::stopSelectionTimeout()
+{
+    selectionTimeoutTimer.stop();
+}
+
+void VendingApplicationController::setupSelectionTimeout()
+{
+    selectionTimeoutTimer.setSingleShot(true);
+    selectionTimeoutTimer.setInterval(15'000);
+    connect(&selectionTimeoutTimer, &QTimer::timeout, this, [this] {
+        if (machine->onSelectionTimeout() == EventResult::Accepted) {
+            refreshState();
+        }
     });
 }

@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 #include <memory>
 
@@ -40,6 +41,9 @@ private:
     void refreshPendingTransactions();
     void finishDispensing(bool success);
     void connectCardReader(ICardReader& cardReader);
+    void setupSelectionTimeout();
+    void startSelectionTimeout();
+    void stopSelectionTimeout();
 
     std::unique_ptr<Dispenser> dispenser;
     std::unique_ptr<TransactionRepository> repository;
@@ -49,4 +53,5 @@ private:
     QString lastState;
     QString activeTransactionId;
     int pendingCount{0};
+    QTimer selectionTimeoutTimer;
 };
