@@ -85,9 +85,8 @@ ApplicationWindow {
 
         ProgressBar {
             from: 0
-            to: 1
-            value: vendingController.state === "Dispensing" ? 0.5 : 0
-            indeterminate: vendingController.state === "Dispensing"
+            to: 100
+            value: vendingController.dispensingProgress
             Layout.fillWidth: true
         }
 

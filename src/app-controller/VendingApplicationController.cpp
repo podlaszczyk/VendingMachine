@@ -1,11 +1,11 @@
 #include "VendingApplicationController.h"
 
 #include <ICardReader.h>
+#include <ITransactionTransport.h>
+#include <SyncWorker.h>
 #include <Transaction.h>
 #include <TransactionRepository.h>
 #include <VendingMachine.h>
-#include <ITransactionTransport.h>
-#include <SyncWorker.h>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -18,6 +18,7 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -47,7 +48,7 @@ public:
         timeout.setSingleShot(true);
         QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-        timeout.start(2'000);
+        timeout.start(2000);
         loop.exec();
 
         if (!reply->isFinished()) {
@@ -58,8 +59,7 @@ public:
 
         const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
-        return statusCode >= 200 && statusCode < 300 ? TransportResult::Success
-                                                      : TransportResult::RetryableFailure;
+        return statusCode >= 200 && statusCode < 300 ? TransportResult::Success : TransportResult::RetryableFailure;
     }
 };
 
@@ -84,8 +84,10 @@ public:
         }
 
         timer = new QTimer(this);
-        timer->setInterval(1'000);
-        QObject::connect(timer, &QTimer::timeout, this, [this] { runOnce(); });
+        timer->setInterval(1000);
+        QObject::connect(timer, &QTimer::timeout, this, [this] {
+            runOnce();
+        });
         timer->start();
         runOnce();
     }
@@ -191,6 +193,11 @@ bool VendingApplicationController::online() const
     return isOnline;
 }
 
+int VendingApplicationController::dispensingProgress() const
+{
+    return currentDispensingProgress;
+}
+
 void VendingApplicationController::simulateCardTap()
 {
     if (machine->onCardTapped(CardId{"demo-card"}) == EventResult::Accepted) {
@@ -219,8 +226,9 @@ void VendingApplicationController::selectProduct(const QString& productId)
 
         if (machine->onProductSelected(ProductId{product}) == EventResult::Accepted) {
             stopSelectionTimeout();
+            startDispensingProgress();
             refreshState();
-            QTimer::singleShot(1500, this, [this] {
+            QTimer::singleShot(std::chrono::duration_cast<std::chrono::milliseconds>(dispensingDuration), this, [this] {
                 finishDispensing(true);
             });
         }
@@ -252,6 +260,8 @@ void VendingApplicationController::finishDispensing(const bool success)
     if (result != EventResult::Accepted) {
         return;
     }
+
+    stopDispensingProgress(success ? 100 : 0);
 
     if (!activeTransactionId.isEmpty()) {
         repository->updateStatus(activeTransactionId.toStdString(), success ? Status::Completed : Status::Failed);
@@ -294,7 +304,7 @@ void VendingApplicationController::connectCardReader(ICardReader& reader)
 
 void VendingApplicationController::startSelectionTimeout()
 {
-    selectionTimeoutTimer.start(15'000);
+    selectionTimeoutTimer.start(1'5000);
 }
 
 void VendingApplicationController::stopSelectionTimeout()
@@ -302,10 +312,40 @@ void VendingApplicationController::stopSelectionTimeout()
     selectionTimeoutTimer.stop();
 }
 
+void VendingApplicationController::startDispensingProgress()
+{
+    if (!dispensingProgressTimerConfigured) {
+        dispensingProgressTimerConfigured = true;
+        dispensingProgressTimer.setInterval(static_cast<int>(progressUpdateInterval.count()));
+        dispensingProgressTimer.setSingleShot(false);
+        connect(&dispensingProgressTimer, &QTimer::timeout, this, [this] {
+            const auto newProgress = std::min(currentDispensingProgress + 2, 100);
+            if (newProgress == currentDispensingProgress) {
+                return;
+            }
+            currentDispensingProgress = newProgress;
+            emit dispensingProgressChanged();
+        });
+    }
+
+    currentDispensingProgress = 0;
+    emit dispensingProgressChanged();
+    dispensingProgressTimer.start();
+}
+
+void VendingApplicationController::stopDispensingProgress(const int finalProgress)
+{
+    dispensingProgressTimer.stop();
+    if (currentDispensingProgress == finalProgress) {
+        return;
+    }
+    currentDispensingProgress = finalProgress;
+    emit dispensingProgressChanged();
+}
+
 void VendingApplicationController::startSynchronization()
 {
-    const auto databasePath = QDir(QCoreApplication::applicationDirPath())
-                                  .filePath("transactions.sqlite");
+    const auto databasePath = QDir(QCoreApplication::applicationDirPath()).filePath("transactions.sqlite");
     syncThread = std::make_unique<QThread>();
     syncRunner = new SyncRunner(databasePath);
     syncRunner->moveToThread(syncThread.get());
@@ -348,7 +388,7 @@ void VendingApplicationController::refreshSynchronizationStatus()
 void VendingApplicationController::setupSelectionTimeout()
 {
     selectionTimeoutTimer.setSingleShot(true);
-    selectionTimeoutTimer.setInterval(15'000);
+    selectionTimeoutTimer.setInterval(1'5000);
     connect(&selectionTimeoutTimer, &QTimer::timeout, this, [this] {
         if (machine->onSelectionTimeout() == EventResult::Accepted) {
             refreshState();

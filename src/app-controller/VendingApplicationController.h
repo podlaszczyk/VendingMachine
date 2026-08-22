@@ -4,6 +4,7 @@
 #include <QString>
 #include <QTimer>
 
+#include <chrono>
 #include <memory>
 
 class ICardReader;
@@ -16,6 +17,7 @@ class VendingApplicationController final : public QObject
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(int pendingTransactions READ pendingTransactions NOTIFY pendingTransactionsChanged)
     Q_PROPERTY(bool online READ online NOTIFY onlineChanged)
+    Q_PROPERTY(int dispensingProgress READ dispensingProgress NOTIFY dispensingProgressChanged)
 
 public:
     explicit VendingApplicationController(QObject* parent = nullptr);
@@ -25,6 +27,7 @@ public:
     [[nodiscard]] QString state() const;
     [[nodiscard]] int pendingTransactions() const;
     [[nodiscard]] bool online() const;
+    [[nodiscard]] int dispensingProgress() const;
 
     Q_INVOKABLE void simulateCardTap();
     Q_INVOKABLE void selectProduct(const QString& productId);
@@ -35,11 +38,15 @@ signals:
     void stateChanged();
     void pendingTransactionsChanged();
     void onlineChanged();
+    void dispensingProgressChanged();
     void errorOccurred(const QString& message);
 
 private:
     class Dispenser;
     class SyncRunner;
+
+    static constexpr std::chrono::seconds dispensingDuration{5};
+    static constexpr std::chrono::milliseconds progressUpdateInterval{100};
 
     void refreshState();
     void refreshPendingTransactions();
@@ -48,6 +55,8 @@ private:
     void setupSelectionTimeout();
     void startSelectionTimeout();
     void stopSelectionTimeout();
+    void startDispensingProgress();
+    void stopDispensingProgress(int finalProgress);
     void startSynchronization();
     void stopSynchronization();
     void refreshSynchronizationStatus();
@@ -63,6 +72,9 @@ private:
     bool isOnline{false};
     QTimer selectionTimeoutTimer;
     QTimer synchronizationStatusTimer;
+    QTimer dispensingProgressTimer;
     SyncRunner* syncRunner{nullptr};
     std::unique_ptr<class QThread> syncThread;
+    int currentDispensingProgress{0};
+    bool dispensingProgressTimerConfigured{false};
 };
