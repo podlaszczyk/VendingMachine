@@ -26,6 +26,12 @@ ApplicationWindow {
             Label {
                 text: qsTr("Pending: %1").arg(vendingController.pendingTransactions)
             }
+
+            Label {
+                text: vendingController.online ? qsTr("Online") : qsTr("Offline")
+                color: vendingController.online ? "green" : "crimson"
+                font.bold: true
+            }
         }
     }
 

@@ -11,6 +11,8 @@ target_link_libraries(${LIB_NAME} PUBLIC
         VendingMachine::Core
         Device::sqlite-library
         Qt6::Core
+        Qt6::Network
+        Sync::Worker
         PRIVATE
         Project::Coverage
 )
